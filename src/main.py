@@ -38,8 +38,6 @@ def criar_servicos() -> ServicosAplicacao:
 def principal() -> None:
     try:
         criar_servicos()
-        print("Camadas de dados e negocio inicializadas com sucesso.")
-        print("A interface Tkinter sera implementada no proximo passo.")
     finally:
         ConexaoSingleton.fechar_conexao()
 
