@@ -25,10 +25,10 @@ class ConexaoFactory:
             raise ValueError(f"Tipo de banco nao suportado: {tipo_banco}")
 
         conexao = mysql.connector.connect(
-            host=configuracao.get("host", "localhost"),
-            port=int(configuracao.get("porta", 3306)),
-            user=configuracao.get("usuario", os.getenv("DB_USER")),
-            password=configuracao.get("senha", os.getenv("DB_SENHA")),
-            database=configuracao.get("banco", "tung_tung"),
+            host=configuracao.get("host") or os.getenv("DB_HOST", "127.0.0.1"),
+            port=int(configuracao.get("porta") or os.getenv("DB_PORTA", 3306)),
+            user=configuracao.get("usuario") or os.getenv("DB_USER", "root"),
+            password=configuracao.get("senha") or os.getenv("DB_SENHA", "labinfo"),
+            database=configuracao.get("banco") or os.getenv("DB_NOME", "aplicacao"),
         )
         return conexao

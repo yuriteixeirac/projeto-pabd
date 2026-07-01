@@ -21,7 +21,10 @@ CREATE TABLE IF NOT EXISTS quarto (
 
 	codigo VARCHAR(4) NOT NULL UNIQUE,
 	capacidade INT NOT NULL,
-	valor DECIMAL(10, 2) NOT NULL
+	valor DECIMAL(10, 2) NOT NULL,
+
+	CONSTRAINT check_capacidade_positiva CHECK(capacidade > 0),
+	CONSTRAINT check_valor_nao_negativo CHECK(valor >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS reserva (
@@ -42,3 +45,6 @@ CREATE TABLE IF NOT EXISTS reserva (
 
 	CONSTRAINT check_checkin_menor_que_checkout CHECK(data_checkout > data_checkin)
 );
+
+INSERT IGNORE INTO usuario (login, senha, nome_completo, cargo)
+VALUES ('admin', SHA2('admin123', 256), 'Administrador', 'admin');

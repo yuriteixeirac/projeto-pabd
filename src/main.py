@@ -1,26 +1,45 @@
-from dados.produto_repository import ProdutoRepository
+from dataclasses import dataclass
 
-from apresentacao.interface_terminal import InterfaceTerminal
-from dados.conexao_singleton import ConexaoSingleton
-from negocio.produto_service import ProdutoService
+from src.dados.cliente_repository import ClienteRepository
+from src.dados.conexao_singleton import ConexaoSingleton
+from src.dados.quarto_repository import QuartoRepository
+from src.dados.reserva_repository import ReservaRepository
+from src.dados.usuario_repository import UsuarioRepository
+from src.negocio.cliente_service import ClienteService
+from src.negocio.quarto_service import QuartoService
+from src.negocio.reserva_service import ReservaService
+from src.negocio.usuario_service import UsuarioService
+
+
+@dataclass
+class ServicosAplicacao:
+    usuario: UsuarioService
+    cliente: ClienteService
+    quarto: QuartoService
+    reserva: ReservaService
+
+
+def criar_servicos() -> ServicosAplicacao:
+    conexao = ConexaoSingleton.obter_conexao()
+
+    usuario_repository = UsuarioRepository(conexao)
+    cliente_repository = ClienteRepository(conexao)
+    quarto_repository = QuartoRepository(conexao)
+    reserva_repository = ReservaRepository(conexao)
+
+    return ServicosAplicacao(
+        usuario=UsuarioService(usuario_repository),
+        cliente=ClienteService(cliente_repository),
+        quarto=QuartoService(quarto_repository, reserva_repository),
+        reserva=ReservaService(reserva_repository, cliente_repository, quarto_repository),
+    )
 
 
 def principal() -> None:
-    conexao = ConexaoSingleton.obter_conexao(
-        tipo_banco="mysql",
-        host="127.0.0.1",
-        porta=3306,
-        usuario="root",
-        senha="labinfo",
-        banco="aplicacao",
-    )
-
-    repositorio_produto = ProdutoRepository(conexao)
-    servico_produto = ProdutoService(repositorio_produto)
-    interface = InterfaceTerminal(servico_produto)
-
     try:
-        interface.executar()
+        criar_servicos()
+        print("Camadas de dados e negocio inicializadas com sucesso.")
+        print("A interface Tkinter sera implementada no proximo passo.")
     finally:
         ConexaoSingleton.fechar_conexao()
 

@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional
 
 import mysql.connector
@@ -27,7 +28,7 @@ class QuartoRepository:
     def listar_todos(self) -> list[Quarto]:
         cursor = self.conexao.cursor(dictionary=True)
         cursor.execute(
-            "SELECT id, codigo, capacidade, valor FROM quarto ORDER BY id"
+            "SELECT id, codigo, capacidade, valor FROM quarto ORDER BY codigo"
         )
 
         linhas = cursor.fetchall()
@@ -61,6 +62,57 @@ class QuartoRepository:
             capacidade=linha["capacidade"],
             valor=linha["valor"],
         )
+
+    def buscar_por_codigo(self, codigo: str) -> Optional[Quarto]:
+        cursor = self.conexao.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT id, codigo, capacidade, valor FROM quarto WHERE codigo = %s",
+            (codigo,),
+        )
+        linha = cursor.fetchone()
+        cursor.close()
+
+        if linha is None:
+            return None
+
+        return Quarto(
+            id=linha["id"],
+            codigo=linha["codigo"],
+            capacidade=linha["capacidade"],
+            valor=linha["valor"],
+        )
+
+    def listar_disponiveis(self, data_checkin: date, data_checkout: date) -> list[Quarto]:
+        cursor = self.conexao.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT q.id, q.codigo, q.capacidade, q.valor
+            FROM quarto q
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM reserva r
+                WHERE r.quarto_id = q.id
+                  AND r.status IN ('pendente', 'confirmada')
+                  AND r.data_checkin < %s
+                  AND r.data_checkout > %s
+            )
+            ORDER BY q.codigo
+            """,
+            (data_checkout, data_checkin),
+        )
+
+        linhas = cursor.fetchall()
+        cursor.close()
+
+        return [
+            Quarto(
+                id=linha["id"],
+                codigo=linha["codigo"],
+                capacidade=linha["capacidade"],
+                valor=linha["valor"],
+            )
+            for linha in linhas
+        ]
 
     def atualizar(self, quarto: Quarto) -> bool:
         cursor = self.conexao.cursor()

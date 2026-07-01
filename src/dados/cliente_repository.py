@@ -60,6 +60,24 @@ class ClienteRepository:
             cpf=linha["cpf"],
         )
 
+    def buscar_por_cpf(self, cpf: str) -> Optional[Cliente]:
+        cursor = self.conexao.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT id, nome_completo, cpf FROM cliente WHERE cpf = %s",
+            (cpf,),
+        )
+        linha = cursor.fetchone()
+        cursor.close()
+
+        if linha is None:
+            return None
+
+        return Cliente(
+            id=linha["id"],
+            nome_completo=linha["nome_completo"],
+            cpf=linha["cpf"],
+        )
+
     def atualizar(self, cliente: Cliente) -> bool:
         cursor = self.conexao.cursor()
         cursor.execute(

@@ -2,7 +2,7 @@ from typing import Optional
 
 import mysql.connector
 
-from dados.conexao_factory import ConexaoFactory
+from src.dados.conexao_factory import ConexaoFactory
 
 
 class ConexaoSingleton:

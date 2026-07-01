@@ -62,6 +62,26 @@ class UsuarioRepository:
             cargo=linha["cargo"],
         )
 
+    def buscar_por_login(self, login: str) -> Optional[Usuario]:
+        cursor = self.conexao.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT id, login, senha, nome_completo, cargo FROM usuario WHERE login = %s",
+            (login,),
+        )
+        linha = cursor.fetchone()
+        cursor.close()
+
+        if linha is None:
+            return None
+
+        return Usuario(
+            id=linha["id"],
+            nome_completo=linha["nome_completo"],
+            login=linha["login"],
+            cargo=linha["cargo"],
+            senha=linha["senha"],
+        )
+
     def atualizar(self, usuario: Usuario) -> bool:
         cursor = self.conexao.cursor()
         if usuario.senha is None:
