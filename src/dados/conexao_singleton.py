@@ -16,7 +16,9 @@ class ConexaoSingleton:
     _conexao: Optional[mysql.connector.MySQLConnection] = None
 
     @classmethod
-    def obter_conexao(cls, tipo_banco: str = "mysql", **configuracao) -> mysql.connector.MySQLConnection:
+    def obter_conexao(
+        cls, tipo_banco: str = "mysql", **configuracao
+    ) -> mysql.connector.MySQLConnection:
         if cls._conexao is None:
             cls._conexao = ConexaoFactory.criar_conexao(
                 tipo_banco=tipo_banco,

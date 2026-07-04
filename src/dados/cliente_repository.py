@@ -26,9 +26,7 @@ class ClienteRepository:
 
     def listar_todos(self) -> list[Cliente]:
         cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, nome_completo, cpf FROM cliente ORDER BY id"
-        )
+        cursor.execute("SELECT id, nome_completo, cpf FROM cliente ORDER BY id")
 
         linhas = cursor.fetchall()
         cursor.close()

@@ -1,4 +1,13 @@
+from __future__ import annotations
+
+import sys
 from dataclasses import dataclass
+from pathlib import Path
+
+if __package__ in (None, ""):
+    raiz_projeto = Path(__file__).resolve().parents[1]
+    if str(raiz_projeto) not in sys.path:
+        sys.path.insert(0, str(raiz_projeto))
 
 from src.dados.cliente_repository import ClienteRepository
 from src.dados.conexao_singleton import ConexaoSingleton
@@ -31,15 +40,19 @@ def criar_servicos() -> ServicosAplicacao:
         usuario=UsuarioService(usuario_repository),
         cliente=ClienteService(cliente_repository),
         quarto=QuartoService(quarto_repository, reserva_repository),
-        reserva=ReservaService(reserva_repository, cliente_repository, quarto_repository),
+        reserva=ReservaService(
+            reserva_repository, cliente_repository, quarto_repository
+        ),
     )
 
 
 def principal() -> None:
     try:
-        criar_servicos()
-        print("Camadas de dados e negocio inicializadas com sucesso.")
-        print("A interface Tkinter sera implementada no proximo passo.")
+        servicos = criar_servicos()
+
+        from src.apresentacao import executar_interface
+
+        executar_interface(servicos)
     finally:
         ConexaoSingleton.fechar_conexao()
 
