@@ -53,6 +53,7 @@ def principal() -> None:
         from src.apresentacao import executar_interface
 
         executar_interface(servicos)
+        criar_servicos()
     finally:
         ConexaoSingleton.fechar_conexao()
 
