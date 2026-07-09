@@ -46,7 +46,7 @@ def criar_servicos() -> ServicosAplicacao:
     )
 
 
-def principal() -> None:
+def main() -> None:
     servicos = criar_servicos()
 
     from src.apresentacao import executar_interface
@@ -55,6 +55,5 @@ def principal() -> None:
     criar_servicos()
 
 
-
 if __name__ == "__main__":
-    principal()
+    main()
