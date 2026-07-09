@@ -1,107 +1,65 @@
 from datetime import date
 from typing import Optional
 
-import mysql.connector
+from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.sql import delete
 
-from src.dominio import Reserva
+from src.dominio import Cliente, Quarto, Reserva, Usuario
 
 
 class ReservaRepository:
     """Camada data: faz o acesso ao banco e executa SQL."""
 
-    def __init__(self, conexao: mysql.connector.MySQLConnection) -> None:
-        self.conexao = conexao
+    def __init__(self, session: sessionmaker[Session]) -> None:
+        self.session = session
 
     def adicionar(self, reserva: Reserva) -> int:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "INSERT INTO reserva (quarto_id, usuario_id, cliente_id, data_checkin, data_checkout, status) VALUES (%s, %s, %s, %s, %s, %s)",
-            (
-                reserva.quarto_id,
-                reserva.usuario_id,
-                reserva.cliente_id,
-                reserva.data_checkin,
-                reserva.data_checkout,
-                reserva.status,
-            ),
-        )
-        self.conexao.commit()
+        with self.session() as session:
+            session.add(reserva)
+            session.commit()
+            session.refresh(reserva)
 
-        novo_id = int(cursor.lastrowid)
-        cursor.close()
-
-        return novo_id
+            return reserva.id    # type: ignore
 
     def listar_todos(self) -> list[Reserva]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, quarto_id, usuario_id, cliente_id, data_checkin, data_checkout, status FROM reserva ORDER BY data_checkin, id"
-        )
-
-        linhas = cursor.fetchall()
-        cursor.close()
-
-        return [
-            Reserva(
-                id=linha["id"],
-                quarto_id=linha["quarto_id"],
-                usuario_id=linha["usuario_id"],
-                cliente_id=linha["cliente_id"],
-                data_checkin=linha["data_checkin"],
-                data_checkout=linha["data_checkout"],
-                status=linha["status"],
+        with self.session() as session:
+            resultado = session.execute(
+                select(Reserva).order_by(Reserva.data_checkin, Reserva.id)
             )
-            for linha in linhas
-        ]
+
+            return resultado.scalars().all()
 
     def listar_detalhadas(self) -> list[dict[str, object]]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            """
-            SELECT
-                r.id,
-                r.quarto_id,
-                q.codigo AS quarto_codigo,
-                r.usuario_id,
-                u.nome_completo AS usuario_nome,
-                r.cliente_id,
-                c.nome_completo AS cliente_nome,
-                r.data_checkin,
-                r.data_checkout,
-                r.status
-            FROM reserva r
-            INNER JOIN quarto q ON q.id = r.quarto_id
-            INNER JOIN usuario u ON u.id = r.usuario_id
-            INNER JOIN cliente c ON c.id = r.cliente_id
-            ORDER BY r.data_checkin, r.id
-            """
-        )
+        with self.session() as session:
+            resultado = session.execute(
+                select(
+                    Reserva.id,
+                    Reserva.quarto_id,
+                    Quarto.codigo.label("quarto_codigo"),
+                    Reserva.usuario_id,
+                    Usuario.nome_completo.label("usuario_nome"),
+                    Reserva.cliente_id,
+                    Cliente.nome_completo.label("cliente_nome"),
+                    Reserva.data_checkin,
+                    Reserva.data_checkout,
+                    Reserva.status,
+                )
+                .join(Quarto, Quarto.id == Reserva.quarto_id)
+                .join(Usuario, Usuario.id == Reserva.usuario_id)
+                .join(Cliente, Cliente.id == Reserva.cliente_id)
+                .order_by(Reserva.data_checkin, Reserva.id)
+            )
 
-        linhas = cursor.fetchall()
-        cursor.close()
-        return linhas
+            return [dict(linha._mapping) for linha in resultado]
 
     def buscar_por_id(self, id_reserva: int) -> Optional[Reserva]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, quarto_id, usuario_id, cliente_id, data_checkin, data_checkout, status FROM reserva WHERE id = %s",
-            (id_reserva,),
-        )
-        linha = cursor.fetchone()
-        cursor.close()
+        with self.session() as session:
+            resultado = session.execute(
+                select(Reserva).where(Reserva.id == id_reserva)
+            )
 
-        if linha is None:
-            return None
-
-        return Reserva(
-            id=linha["id"],
-            quarto_id=linha["quarto_id"],
-            usuario_id=linha["usuario_id"],
-            cliente_id=linha["cliente_id"],
-            data_checkin=linha["data_checkin"],
-            data_checkout=linha["data_checkout"],
-            status=linha["status"],
-        )
+            return resultado.scalars().one_or_none()
 
     def existe_conflito(
         self,
@@ -110,74 +68,58 @@ class ReservaRepository:
         data_checkout: date,
         reserva_ignorada_id: Optional[int] = None,
     ) -> bool:
-        cursor = self.conexao.cursor(dictionary=True)
+        with self.session() as session:
+            consulta = select(Reserva.id).where(
+                Reserva.quarto_id == quarto_id,
+                Reserva.status.in_(["pendente", "confirmada"]),
+                Reserva.data_checkin < data_checkout,
+                Reserva.data_checkout > data_checkin,
+            )
 
-        sql = """
-            SELECT COUNT(*) AS total
-            FROM reserva
-            WHERE quarto_id = %s
-              AND status IN ('pendente', 'confirmada')
-              AND data_checkin < %s
-              AND data_checkout > %s
-        """
-        parametros: list[object] = [quarto_id, data_checkout, data_checkin]
+            if reserva_ignorada_id is not None:
+                consulta = consulta.where(Reserva.id != reserva_ignorada_id)
 
-        if reserva_ignorada_id is not None:
-            sql += " AND id <> %s"
-            parametros.append(reserva_ignorada_id)
+            resultado = session.execute(consulta.limit(1))
 
-        cursor.execute(sql, tuple(parametros))
-        linha = cursor.fetchone()
-        cursor.close()
-
-        return bool(linha and linha["total"] > 0)
+            return resultado.scalar_one_or_none() is not None
 
     def atualizar_status(self, id_reserva: int, status: str) -> bool:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "UPDATE reserva SET status = %s WHERE id = %s",
-            (status, id_reserva),
-        )
+        with self.session() as session:
+            resultado = session.execute(
+                select(Reserva).where(Reserva.id == id_reserva)
+            ).scalars().one_or_none()
 
-        self.conexao.commit()
+            if not resultado:
+                return False
 
-        afetados = cursor.rowcount > 0
-        cursor.close()
-
-        return afetados
+            resultado.status = status
+            session.commit()
+            return True
 
     def atualizar(self, reserva: Reserva) -> bool:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "UPDATE reserva SET quarto_id = %s, usuario_id = %s, cliente_id = %s, data_checkin = %s, data_checkout = %s, status = %s WHERE id = %s",
-            (
-                reserva.quarto_id,
-                reserva.usuario_id,
-                reserva.cliente_id,
-                reserva.data_checkin,
-                reserva.data_checkout,
-                reserva.status,
-                reserva.id,
-            ),
-        )
+        with self.session() as session:
+            resultado = session.execute(
+                select(Reserva).where(Reserva.id == reserva.id)
+            ).scalars().one_or_none()
 
-        self.conexao.commit()
+            if not resultado:
+                return False
 
-        afetados = cursor.rowcount > 0
-        cursor.close()
+            resultado.quarto_id = reserva.quarto_id
+            resultado.usuario_id = reserva.usuario_id
+            resultado.cliente_id = reserva.cliente_id
+            resultado.data_checkin = reserva.data_checkin
+            resultado.data_checkout = reserva.data_checkout
+            resultado.status = reserva.status
 
-        return afetados
+            session.commit()
+            return True
 
     def remover(self, id_reserva: int) -> bool:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "DELETE FROM reserva WHERE id = %s",
-            (id_reserva,),
-        )
+        with self.session() as session:
+            resultado = session.execute(
+                delete(Reserva).where(Reserva.id == id_reserva)
+            )
+            session.commit()
 
-        self.conexao.commit()
-
-        afetados = cursor.rowcount > 0
-        cursor.close()
-
-        return afetados
+            return resultado.rowcount > 0

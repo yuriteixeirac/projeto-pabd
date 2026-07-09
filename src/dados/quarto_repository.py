@@ -1,143 +1,95 @@
+from collections.abc import Sequence
 from datetime import date
 from typing import Optional
 
-import mysql.connector
+from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.sql import delete, exists
 
 from src.dominio import Quarto
+from src.dominio.reserva import Reserva
 
 
 class QuartoRepository:
     """Camada data: faz o acesso ao banco e executa SQL."""
 
-    def __init__(self, conexao: mysql.connector.MySQLConnection) -> None:
-        self.conexao = conexao
+    def __init__(self, session: sessionmaker[Session]) -> None:
+        self.session = session
 
     def adicionar(self, quarto: Quarto) -> int:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "INSERT INTO quarto (codigo, capacidade, valor) VALUES (%s, %s, %s)",
-            (quarto.codigo, quarto.capacidade, quarto.valor),
-        )
-        self.conexao.commit()
+        with self.session() as session:
+            session.add(quarto)
+            session.commit()
+            session.refresh(quarto)
 
-        novo_id = int(cursor.lastrowid)
-        cursor.close()
+            return quarto.id    # type: ignore
 
-        return novo_id
-
-    def listar_todos(self) -> list[Quarto]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, codigo, capacidade, valor FROM quarto ORDER BY codigo"
-        )
-
-        linhas = cursor.fetchall()
-        cursor.close()
-
-        return [
-            Quarto(
-                id=linha["id"],
-                codigo=linha["codigo"],
-                capacidade=linha["capacidade"],
-                valor=linha["valor"],
+    def listar_todos(self) -> Sequence[Quarto]:
+        with self.session() as session:
+            resultado = session.execute(
+                select(Quarto).order_by(Quarto.id)
             )
-            for linha in linhas
-        ]
+
+            return resultado.scalars().all()
 
     def buscar_por_id(self, id_quarto: int) -> Optional[Quarto]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, codigo, capacidade, valor FROM quarto WHERE id = %s",
-            (id_quarto,),
-        )
-        linha = cursor.fetchone()
-        cursor.close()
+        with self.session() as session:
+            resultado = session.execute(
+                select(Quarto).where(Quarto.id == id_quarto)
+            )
 
-        if linha is None:
-            return None
-
-        return Quarto(
-            id=linha["id"],
-            codigo=linha["codigo"],
-            capacidade=linha["capacidade"],
-            valor=linha["valor"],
-        )
+            return resultado.scalars().one_or_none()
 
     def buscar_por_codigo(self, codigo: str) -> Optional[Quarto]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, codigo, capacidade, valor FROM quarto WHERE codigo = %s",
-            (codigo,),
-        )
-        linha = cursor.fetchone()
-        cursor.close()
-
-        if linha is None:
-            return None
-
-        return Quarto(
-            id=linha["id"],
-            codigo=linha["codigo"],
-            capacidade=linha["capacidade"],
-            valor=linha["valor"],
-        )
-
-    def listar_disponiveis(self, data_checkin: date, data_checkout: date) -> list[Quarto]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            """
-            SELECT q.id, q.codigo, q.capacidade, q.valor
-            FROM quarto q
-            WHERE NOT EXISTS (
-                SELECT 1
-                FROM reserva r
-                WHERE r.quarto_id = q.id
-                  AND r.status IN ('pendente', 'confirmada')
-                  AND r.data_checkin < %s
-                  AND r.data_checkout > %s
+        with self.session() as session:
+            resultado = session.execute(
+                select(Quarto).where(Quarto.codigo == codigo)
             )
-            ORDER BY q.codigo
-            """,
-            (data_checkout, data_checkin),
-        )
 
-        linhas = cursor.fetchall()
-        cursor.close()
+            return resultado.scalars().one_or_none()
 
-        return [
-            Quarto(
-                id=linha["id"],
-                codigo=linha["codigo"],
-                capacidade=linha["capacidade"],
-                valor=linha["valor"],
+    def listar_disponiveis(self, data_checkin: date, data_checkout: date) -> Sequence[Quarto]:
+        with self.session() as session:
+            resultado = session.execute(
+                select(Quarto)
+                .where(
+                    ~exists(
+                        select(1)
+                        .select_from(Reserva)
+                        .where(
+                            Reserva.quarto_id == Quarto.id,
+                            Reserva.status.in_(["pendente", "confirmada"]),
+                            Reserva.data_checkin < data_checkout,
+                            Reserva.data_checkout > data_checkin,
+                        )
+                    )
+                )
+                .order_by(Quarto.codigo)
             )
-            for linha in linhas
-        ]
+
+            return resultado.scalars().all()
 
     def atualizar(self, quarto: Quarto) -> bool:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "UPDATE quarto SET codigo = %s, capacidade = %s, valor = %s WHERE id = %s",
-            (quarto.codigo, quarto.capacidade, quarto.valor, quarto.id),
-        )
+        with self.session() as session:
+            resultado = session.execute(
+                select(Quarto).where(Quarto.id == quarto.id)
+            ).scalars().one_or_none()
 
-        self.conexao.commit()
+            if not resultado:
+                return False
 
-        afetados = cursor.rowcount > 0
-        cursor.close()
+            resultado.codigo = quarto.codigo
+            resultado.capacidade = quarto.capacidade
+            resultado.valor = quarto.valor
 
-        return afetados
+            session.commit()
+        return True
 
     def remover(self, id_quarto: int) -> bool:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "DELETE FROM quarto WHERE id = %s",
-            (id_quarto,),
-        )
+        with self.session() as session:
+            resultado = session.execute(
+                delete(Quarto).where(Quarto.id == id_quarto)
+            )
+            session.commit()
 
-        self.conexao.commit()
-
-        afetados = cursor.rowcount > 0
-        cursor.close()
-
-        return afetados
+            return resultado.rowcount > 0

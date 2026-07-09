@@ -1,10 +1,10 @@
 import hashlib
 from typing import Optional
 
-from mysql.connector import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from src.dados.usuario_repository import UsuarioRepository
-from src.dominio import Cargo, Usuario
+from src.dominio import Usuario
 from src.negocio.autorizacao import exigir_admin
 
 
@@ -31,7 +31,7 @@ class UsuarioService:
         login: str,
         senha: str,
         nome_completo: str,
-        cargo: Cargo,
+        cargo: str,
         usuario_atual: Usuario,
     ) -> Usuario:
         exigir_admin(usuario_atual)
@@ -66,7 +66,7 @@ class UsuarioService:
         id_usuario: int,
         login: str,
         nome_completo: str,
-        cargo: Cargo,
+        cargo: str,
         usuario_atual: Usuario,
         senha: Optional[str] = None,
     ) -> bool:
@@ -115,7 +115,7 @@ class UsuarioService:
         return nome
 
     @staticmethod
-    def _normalizar_cargo(cargo: Cargo) -> Cargo:
+    def _normalizar_cargo(cargo: str) -> str:
         if cargo not in ("admin", "atendente"):
             raise ValueError("O cargo deve ser admin ou atendente.")
         return cargo

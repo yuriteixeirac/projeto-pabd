@@ -1,6 +1,6 @@
 from typing import Optional
 
-from mysql.connector import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from src.dados.cliente_repository import ClienteRepository
 from src.dominio import Cliente, Usuario

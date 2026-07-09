@@ -1,6 +1,9 @@
+from collections.abc import Sequence
 from typing import Optional
 
-import mysql.connector
+from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.sql import delete
 
 from src.dominio import Usuario
 
@@ -8,121 +11,82 @@ from src.dominio import Usuario
 class UsuarioRepository:
     """Camada data: faz o acesso ao banco e executa SQL."""
 
-    def __init__(self, conexao: mysql.connector.MySQLConnection) -> None:
-        self.conexao = conexao
+    def __init__(self, session: sessionmaker[Session]) -> None:
+        self.session = session
 
     def adicionar(self, usuario: Usuario) -> int:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "INSERT INTO usuario (login, senha, nome_completo, cargo) VALUES (%s, %s, %s, %s)",
-            (usuario.login, usuario.senha, usuario.nome_completo, usuario.cargo),
-        )
-        self.conexao.commit()
+        with self.session() as session:
+            session.add(usuario)
+            session.commit()
+            session.refresh(usuario)
 
-        novo_id = int(cursor.lastrowid)
-        cursor.close()
+            return usuario.id    # type: ignore
 
-        return novo_id
-
-    def listar_todos(self) -> list[Usuario]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, login, nome_completo, cargo FROM usuario ORDER BY id"
-        )
-
-        linhas = cursor.fetchall()
-        cursor.close()
-
-        return [
-            Usuario(
-                id=linha["id"],
-                login=linha["login"],
-                nome_completo=linha["nome_completo"],
-                cargo=linha["cargo"],
+    def listar_todos(self) -> Sequence[Usuario]:
+        with self.session() as session:
+            resultado = session.execute(
+                select(Usuario.id, Usuario.login, Usuario.nome_completo, Usuario.cargo)
+                .order_by(Usuario.id)
             )
-            for linha in linhas
-        ]
+
+            return [
+                Usuario(
+                    id=linha.id,
+                    login=linha.login,
+                    nome_completo=linha.nome_completo,
+                    cargo=linha.cargo,
+                )
+                for linha in resultado
+            ]
 
     def buscar_por_id(self, id_usuario: int) -> Optional[Usuario]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, login, nome_completo, cargo FROM usuario WHERE id = %s",
-            (id_usuario,),
-        )
-        linha = cursor.fetchone()
-        cursor.close()
+        with self.session() as session:
+            resultado = session.execute(
+                select(Usuario.id, Usuario.login, Usuario.nome_completo, Usuario.cargo)
+                .where(Usuario.id == id_usuario)
+            ).one_or_none()
 
-        if linha is None:
-            return None
+            if resultado is None:
+                return None
 
-        return Usuario(
-            id=linha["id"],
-            nome_completo=linha["nome_completo"],
-            login=linha["login"],
-            cargo=linha["cargo"],
-        )
+            return Usuario(
+                id=resultado.id,
+                login=resultado.login,
+                nome_completo=resultado.nome_completo,
+                cargo=resultado.cargo,
+            )
 
     def buscar_por_login(self, login: str) -> Optional[Usuario]:
-        cursor = self.conexao.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id, login, senha, nome_completo, cargo FROM usuario WHERE login = %s",
-            (login,),
-        )
-        linha = cursor.fetchone()
-        cursor.close()
+        with self.session() as session:
+            resultado = session.execute(
+                select(Usuario).where(Usuario.login == login)
+            )
 
-        if linha is None:
-            return None
-
-        return Usuario(
-            id=linha["id"],
-            nome_completo=linha["nome_completo"],
-            login=linha["login"],
-            cargo=linha["cargo"],
-            senha=linha["senha"],
-        )
+            return resultado.scalars().one_or_none()
 
     def atualizar(self, usuario: Usuario) -> bool:
-        cursor = self.conexao.cursor()
-        if usuario.senha is None:
-            cursor.execute(
-                "UPDATE usuario SET nome_completo = %s, login = %s, cargo = %s WHERE id = %s",
-                (
-                    usuario.nome_completo,
-                    usuario.login,
-                    usuario.cargo,
-                    usuario.id,
-                ),
-            )
-        else:
-            cursor.execute(
-                "UPDATE usuario SET nome_completo = %s, login = %s, cargo = %s, senha = %s WHERE id = %s",
-                (
-                    usuario.nome_completo,
-                    usuario.login,
-                    usuario.cargo,
-                    usuario.senha,
-                    usuario.id,
-                ),
-            )
+        with self.session() as session:
+            resultado = session.execute(
+                select(Usuario).where(Usuario.id == usuario.id)
+            ).scalars().one_or_none()
 
-        self.conexao.commit()
+            if not resultado:
+                return False
 
-        afetados = cursor.rowcount > 0
-        cursor.close()
+            resultado.nome_completo = usuario.nome_completo
+            resultado.login = usuario.login
+            resultado.cargo = usuario.cargo
+            if usuario.senha is not None:
+                resultado.senha = usuario.senha
 
-        return afetados
+            session.commit()
+            return True
 
     def remover(self, id_usuario: int) -> bool:
-        cursor = self.conexao.cursor()
-        cursor.execute(
-            "DELETE FROM usuario WHERE id = %s",
-            (id_usuario,),
-        )
+        with self.session() as session:
+            resultado = session.execute(
+                delete(Usuario).where(Usuario.id == id_usuario)
+            )
+            session.commit()
 
-        self.conexao.commit()
-
-        afetados = cursor.rowcount > 0
-        cursor.close()
-
-        return afetados
+            return resultado.rowcount > 0

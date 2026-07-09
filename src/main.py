@@ -29,12 +29,12 @@ class ServicosAplicacao:
 
 
 def criar_servicos() -> ServicosAplicacao:
-    conexao = ConexaoSingleton.obter_conexao()
+    session = ConexaoSingleton.obter_conexao()
 
-    usuario_repository = UsuarioRepository(conexao)
-    cliente_repository = ClienteRepository(conexao)
-    quarto_repository = QuartoRepository(conexao)
-    reserva_repository = ReservaRepository(conexao)
+    usuario_repository = UsuarioRepository(session)
+    cliente_repository = ClienteRepository(session)
+    quarto_repository = QuartoRepository(session)
+    reserva_repository = ReservaRepository(session)
 
     return ServicosAplicacao(
         usuario=UsuarioService(usuario_repository),
@@ -47,15 +47,13 @@ def criar_servicos() -> ServicosAplicacao:
 
 
 def principal() -> None:
-    try:
-        servicos = criar_servicos()
+    servicos = criar_servicos()
 
-        from src.apresentacao import executar_interface
+    from src.apresentacao import executar_interface
 
-        executar_interface(servicos)
-        criar_servicos()
-    finally:
-        ConexaoSingleton.fechar_conexao()
+    executar_interface(servicos)
+    criar_servicos()
+
 
 
 if __name__ == "__main__":

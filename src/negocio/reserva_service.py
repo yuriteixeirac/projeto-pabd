@@ -1,6 +1,6 @@
 from datetime import date
 
-from mysql.connector import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from src.dados.cliente_repository import ClienteRepository
 from src.dados.quarto_repository import QuartoRepository

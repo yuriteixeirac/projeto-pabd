@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from mysql.connector import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from src.dados.quarto_repository import QuartoRepository
 from src.dados.reserva_repository import ReservaRepository
