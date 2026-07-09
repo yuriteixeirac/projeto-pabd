@@ -42,12 +42,6 @@ class LoginFrame(ttk.Frame):
             command=self.entrar,
         ).grid(row=6, column=0, columnspan=2, sticky="ew")
 
-        ttk.Label(
-            painel,
-            text="Usuario inicial: admin / admin123",
-            foreground="#555555",
-        ).grid(row=7, column=0, columnspan=2, sticky="w", pady=(14, 0))
-
         entrada_login.focus_set()
 
     def entrar(self) -> None:
