@@ -1,13 +1,11 @@
-from logging.config import fileConfig
 import os
+from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
 from alembic import context
 from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
 
 from src.dominio.base import Base
-from src.dominio import Cliente, Usuario, Reserva, Quarto
 
 load_dotenv()
 
@@ -15,13 +13,16 @@ load_dotenv()
 # access to the values within the .ini file in use.
 config = context.config
 
-host=os.getenv("DB_HOST", "127.0.0.1")
-port=int(os.getenv("DB_PORTA", 3306))
-user=os.getenv("DB_USER", "root")
-password=os.getenv("DB_SENHA", "labinfo")
-database=os.getenv("DB_NOME", "aplicacao")
+host = os.getenv("DB_HOST", "127.0.0.1")
+port = int(os.getenv("DB_PORTA", 3306))
+user = os.getenv("DB_USER", "root")
+password = os.getenv("DB_SENHA", "labinfo")
+database = os.getenv("DB_NOME", "aplicacao")
 
-config.set_main_option("sqlalchemy.url", f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}")
+config.set_main_option(
+    "sqlalchemy.url",
+    f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}",
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -52,8 +53,6 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-
-
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -80,9 +79,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
