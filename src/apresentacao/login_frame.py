@@ -14,7 +14,7 @@ class LoginFrame(ttk.Frame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        painel = ttk.Frame(self, padding=28, relief="ridge")
+        painel = ttk.Frame(self, padding=28)
         painel.grid(row=0, column=0)
 
         ttk.Label(painel, text="Hotel Tung Tung", style="Titulo.TLabel").grid(
@@ -38,7 +38,7 @@ class LoginFrame(ttk.Frame):
         ttk.Button(
             painel,
             text="Entrar",
-            style="Acao.TButton",
+            style="primary.TButton",
             command=self.entrar,
         ).grid(row=6, column=0, columnspan=2, sticky="ew")
 

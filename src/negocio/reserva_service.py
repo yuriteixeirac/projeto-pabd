@@ -60,7 +60,28 @@ class ReservaService:
 
     def listar_reservas(self, usuario_atual: Usuario) -> list[dict[str, object]]:
         exigir_autenticado(usuario_atual)
-        return self.repositorio.listar_detalhadas()
+        reservas = self.repositorio.listar_detalhadas()
+        for reserva in reservas:
+            dias = (reserva["data_checkout"] - reserva["data_checkin"]).days
+            valor = float(reserva["quarto_valor"])
+            reserva["valor_total"] = dias * valor
+        return reservas
+
+    def listar_reservas_filtradas(
+        self,
+        usuario_atual: Usuario,
+        data_checkin: date | None = None,
+        data_checkout: date | None = None,
+        status: str | None = None,
+        cliente_id: int | None = None,
+    ) -> list[dict[str, object]]:
+        exigir_autenticado(usuario_atual)
+        reservas = self.repositorio.listar_filtradas(data_checkin, data_checkout, status, cliente_id)
+        for reserva in reservas:
+            dias = (reserva["data_checkout"] - reserva["data_checkin"]).days
+            valor = float(reserva["quarto_valor"])
+            reserva["valor_total"] = dias * valor
+        return reservas
 
     def buscar_reserva_por_id(self, id_reserva: int, usuario_atual: Usuario) -> Reserva | None:
         exigir_autenticado(usuario_atual)
@@ -102,6 +123,26 @@ class ReservaService:
             raise ValueError("Apenas reservas confirmadas podem ser finalizadas.")
 
         return self.repositorio.atualizar_status(id_reserva, "finalizada")
+
+    def contar_reservas_ativas_hoje(self, usuario_atual: Usuario) -> int:
+        exigir_autenticado(usuario_atual)
+        return self.repositorio.contar_ativas_por_periodo(date.today())
+
+    def contar_pendentes(self, usuario_atual: Usuario) -> int:
+        exigir_autenticado(usuario_atual)
+        return self.repositorio.contar_pendentes()
+
+    def faturamento_mes(self, usuario_atual: Usuario, ano: int, mes: int) -> float:
+        exigir_autenticado(usuario_atual)
+        return self.repositorio.faturamento_mes(ano, mes)
+
+    def ultimas_reservas(self, usuario_atual: Usuario, limite: int = 5) -> list[dict[str, object]]:
+        exigir_autenticado(usuario_atual)
+        return self.repositorio.ultimas_reservas(limite)
+
+    def proximos_checkins(self, usuario_atual: Usuario, dias: int = 7) -> list[dict[str, object]]:
+        exigir_autenticado(usuario_atual)
+        return self.repositorio.proximos_checkins(dias)
 
     def _obter_reserva_existente(self, id_reserva: int) -> Reserva:
         self._validar_id(id_reserva, "reserva")

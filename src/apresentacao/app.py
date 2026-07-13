@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import messagebox, ttk
+from ttkbootstrap import Style
 
 from src.apresentacao.login_frame import LoginFrame
 from src.apresentacao.main_frame import MainFrame
@@ -27,16 +28,17 @@ class HotelApp(tk.Tk):
         self.mostrar_login()
 
     def _configurar_estilo(self) -> None:
-        estilo = ttk.Style(self)
-        try:
-            estilo.theme_use("clam")
-        except tk.TclError:
-            pass
+        self.style = Style(theme="flatly")
 
-        estilo.configure("Titulo.TLabel", font=("TkDefaultFont", 15, "bold"))
-        estilo.configure("Subtitulo.TLabel", font=("TkDefaultFont", 10, "bold"))
-        estilo.configure("Acao.TButton", padding=(10, 5))
-        estilo.configure("Danger.TButton", padding=(10, 5))
+        self.style.configure("Titulo.TLabel", font=("Helvetica", 16, "bold"))
+        self.style.configure("Subtitulo.TLabel", font=("Helvetica", 11, "bold"))
+
+        self.style.configure("Treeview", rowheight=28)
+        self.style.map(
+            "Treeview",
+            background=[("selected", "#0d6efd")],
+            foreground=[("selected", "white")],
+        )
 
     def mostrar_login(self) -> None:
         self.usuario_atual = None

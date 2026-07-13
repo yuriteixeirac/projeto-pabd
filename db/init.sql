@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS quarto (
 	codigo VARCHAR(4) NOT NULL UNIQUE,
 	capacidade INT NOT NULL,
 	valor DECIMAL(10, 2) NOT NULL,
+	descricao TEXT DEFAULT '',
+	tipo VARCHAR(16) DEFAULT 'casal' NOT NULL,
 
 	CONSTRAINT check_capacidade_positiva CHECK(capacidade > 0),
 	CONSTRAINT check_valor_nao_negativo CHECK(valor >= 0)

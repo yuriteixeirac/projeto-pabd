@@ -66,27 +66,30 @@ class UsuarioFrame(TelaBase):
         )
         ttk.Label(
             formulario,
-            text="Obrigatoria para novo usuario. Em edicoes, deixe em branco para manter.",
-            foreground="#555555",
+                text="Obrigatoria para novo usuario. Em edicoes, deixe em branco para manter.",
+            style="secondary.TLabel",
             wraplength=240,
         ).grid(row=8, column=0, sticky="w", pady=(0, 12))
 
         ttk.Button(
             formulario,
             text="Salvar",
+            style="success.TButton",
             command=lambda: self.executar(self.salvar),
         ).grid(row=9, column=0, sticky="ew", pady=(0, 6))
-        ttk.Button(formulario, text="Novo", command=self.limpar).grid(
+        ttk.Button(formulario, text="Novo", style="secondary.TButton", command=self.limpar).grid(
             row=10, column=0, sticky="ew", pady=(0, 6)
         )
         ttk.Button(
             formulario,
             text="Remover",
+            style="danger.TButton",
             command=lambda: self.executar(self.remover),
         ).grid(row=11, column=0, sticky="ew", pady=(0, 6))
         ttk.Button(
             formulario,
             text="Recarregar",
+            style="secondary.TButton",
             command=lambda: self.executar(self.recarregar),
         ).grid(row=12, column=0, sticky="ew")
 

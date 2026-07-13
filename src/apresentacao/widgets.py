@@ -91,3 +91,48 @@ def formatar_data(valor: object) -> str:
     if hasattr(valor, "isoformat"):
         return valor.isoformat()
     return str(valor)
+
+
+def criar_datepicker(
+    master: tk.Widget,
+    date_var: tk.StringVar,
+    date_pattern: str = "yyyy-mm-dd",
+    width: int = 14,
+) -> ttk.Frame:
+    from ttkbootstrap.widgets import DateEntry as TbDateEntry
+    from datetime import date, datetime
+
+    fmt = "%Y-%m-%d" if date_pattern == "yyyy-mm-dd" else "%d/%m/%Y"
+
+    try:
+        inicio = datetime.strptime(date_var.get().strip(), fmt) if date_var.get().strip() else None
+    except (ValueError, TypeError):
+        inicio = None
+
+    picker = TbDateEntry(master, dateformat=fmt, startdate=inicio, bootstyle="info", width=width)
+
+    def _atualizar_var(*_: object) -> None:
+        try:
+            dt = picker.get_date()
+            date_var.set(dt.strftime(fmt))
+        except Exception:
+            pass
+
+    picker.bind("<<DateEntrySelected>>", _atualizar_var)
+
+    def _monitorar_var(*_: object) -> None:
+        val = date_var.get().strip()
+        if not val:
+            picker.entry.delete(0, "end")
+            return
+        try:
+            picker.set_date(datetime.strptime(val, fmt))
+        except (ValueError, TypeError):
+            pass
+
+    date_var.trace_add("write", _monitorar_var)
+
+    if inicio:
+        date_var.set(inicio.strftime(fmt))
+
+    return picker

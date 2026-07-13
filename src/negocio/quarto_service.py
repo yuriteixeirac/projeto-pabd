@@ -20,18 +20,24 @@ class QuartoService:
         self.repositorio = repositorio
         self.reserva_repository = reserva_repository
 
+    TIPOS_VALIDOS = ("solteiro", "casal", "suite")
+
     def cadastrar_quarto(
         self,
         codigo: str,
         capacidade: int,
         valor: Decimal | str | float,
         usuario_atual: Usuario,
+        descricao: str = "",
+        tipo: str = "casal",
     ) -> Quarto:
         exigir_admin(usuario_atual)
         quarto = Quarto(
             codigo=self._normalizar_codigo(codigo),
             capacidade=self._normalizar_capacidade(capacidade),
             valor=self._normalizar_valor(valor),
+            descricao=descricao.strip(),
+            tipo=self._normalizar_tipo(tipo),
         )
 
         try:
@@ -67,6 +73,8 @@ class QuartoService:
         capacidade: int,
         valor: Decimal | str | float,
         usuario_atual: Usuario,
+        descricao: str = "",
+        tipo: str = "casal",
     ) -> bool:
         exigir_admin(usuario_atual)
         self._validar_id(id_quarto)
@@ -76,6 +84,8 @@ class QuartoService:
             codigo=self._normalizar_codigo(codigo),
             capacidade=self._normalizar_capacidade(capacidade),
             valor=self._normalizar_valor(valor),
+            descricao=descricao.strip(),
+            tipo=self._normalizar_tipo(tipo),
         )
 
         try:
@@ -91,6 +101,11 @@ class QuartoService:
             return self.repositorio.remover(id_quarto)
         except IntegrityError as erro:
             raise ValueError("Quarto possui reservas vinculadas e nao pode ser removido.") from erro
+
+    def contar_ocupados(self, usuario_atual: Usuario) -> int:
+        exigir_autenticado(usuario_atual)
+        hoje = date.today()
+        return self.reserva_repository.contar_ativas_por_periodo(hoje)
 
     def quarto_disponivel(
         self,
@@ -135,6 +150,15 @@ class QuartoService:
         if valor_normalizado < 0:
             raise ValueError("O valor do quarto nao pode ser negativo.")
         return valor_normalizado
+
+    @staticmethod
+    def _normalizar_tipo(tipo: str) -> str:
+        tipo_normalizado = tipo.strip().lower()
+        if tipo_normalizado not in QuartoService.TIPOS_VALIDOS:
+            raise ValueError(
+                f"Tipo de quarto invalido. Opcoes: {', '.join(QuartoService.TIPOS_VALIDOS)}."
+            )
+        return tipo_normalizado
 
     @staticmethod
     def _normalizar_periodo(

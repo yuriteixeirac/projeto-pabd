@@ -81,6 +81,8 @@ class QuartoRepository:
             resultado.codigo = quarto.codigo
             resultado.capacidade = quarto.capacidade
             resultado.valor = quarto.valor
+            resultado.descricao = quarto.descricao
+            resultado.tipo = quarto.tipo
 
             session.commit()
         return True

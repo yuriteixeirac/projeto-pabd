@@ -14,3 +14,5 @@ class Quarto(Base):
     codigo: so.Mapped[str] = so.mapped_column(sa.String(16), unique=True)
     capacidade: so.Mapped[int] = so.mapped_column(sa.Integer())
     valor: so.Mapped[Decimal] = so.mapped_column(sa.DECIMAL(10, 2))
+    descricao: so.Mapped[str] = so.mapped_column(sa.Text(), default="")
+    tipo: so.Mapped[str] = so.mapped_column(sa.String(16), default="casal")

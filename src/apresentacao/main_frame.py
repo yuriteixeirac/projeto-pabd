@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 from src.apresentacao.base import AcessoRestritoFrame
 from src.apresentacao.cliente_frame import ClienteFrame
+from src.apresentacao.dashboard_frame import DashboardFrame
 from src.apresentacao.quarto_frame import QuartoFrame
 from src.apresentacao.reserva_frame import ReservaFrame
 from src.apresentacao.usuario_frame import UsuarioFrame
@@ -33,13 +34,14 @@ class MainFrame(ttk.Frame):
         ttk.Label(cabecalho, text=f"Logado como {nome_usuario} ({cargo})").grid(
             row=1, column=0, sticky="w"
         )
-        ttk.Button(cabecalho, text="Sair", command=self.app.sair).grid(
+        ttk.Button(cabecalho, text="Sair", style="secondary.TButton", command=self._confirmar_sair).grid(
             row=0, column=1, rowspan=2, sticky="e"
         )
 
         abas = ttk.Notebook(self)
         abas.grid(row=1, column=0, sticky="nsew")
 
+        abas.add(DashboardFrame(self.app, abas), text="Dashboard")
         abas.add(ClienteFrame(self.app, abas), text="Clientes")
         abas.add(QuartoFrame(self.app, abas), text="Quartos")
         abas.add(ReservaFrame(self.app, abas), text="Reservas")
@@ -55,3 +57,7 @@ class MainFrame(ttk.Frame):
                 ),
                 text="Usuarios",
             )
+
+    def _confirmar_sair(self) -> None:
+        if messagebox.askyesno("Sair", "Deseja realmente sair do sistema?", parent=self):
+            self.app.sair()
