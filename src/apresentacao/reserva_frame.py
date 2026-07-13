@@ -166,6 +166,9 @@ class ReservaFrame(TelaBase):
         self.executar(self.recarregar)
 
     def recarregar(self) -> None:
+        limpar_tabela(self.tabela)
+        self.reservas_por_id.clear()
+
         self._carregar_opcoes()
         reservas = self.app.servicos.reserva.listar_reservas(self.usuario_atual)
         self._preencher_reservas(reservas)
@@ -274,6 +277,7 @@ class ReservaFrame(TelaBase):
     def criar_reserva(self) -> None:
         cliente_id = self._id_cliente_selecionado()
         quarto_id = self._id_quarto_selecionado()
+
         self.app.servicos.reserva.criar_reserva(
             cliente_id,
             quarto_id,
@@ -281,6 +285,7 @@ class ReservaFrame(TelaBase):
             self.checkout_var.get(),
             self.usuario_atual,
         )
+
         self.limpar()
         self.recarregar()
         messagebox.showinfo("Reservas", "Reserva criada como pendente.", parent=self)
