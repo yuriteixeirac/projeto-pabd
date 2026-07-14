@@ -17,9 +17,10 @@ class DashboardFrame(TelaBase):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        ttk.Label(self, text="Dashboard", style="Titulo.TLabel").grid(
-            row=0, column=0, sticky="w", pady=(0, 12)
-        )
+        cabecalho = ttk.Frame(self)
+        cabecalho.grid(row=0, column=0, sticky="w", pady=(0, 12))
+        ttk.Label(cabecalho, text="Dashboard", style="Titulo.TLabel").pack(side="left")
+        ttk.Button(cabecalho, text="↻", width=3, command=lambda: self.executar(self._atualizar)).pack(side="left", padx=(8, 0))
 
         cards = ttk.Frame(self)
         cards.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 16))
